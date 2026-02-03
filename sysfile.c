@@ -18,6 +18,8 @@
 
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
+int readcount = 0;
+
 static int
 argfd(int n, int *pfd, struct file **pf)
 {
@@ -32,6 +34,17 @@ argfd(int n, int *pfd, struct file **pf)
     *pfd = fd;
   if(pf)
     *pf = f;
+  return 0;
+}
+
+int sys_settickets(void) {
+  struct proc *curproc = myproc();
+  int tickets;
+  if(argint(0, &tickets) < 0)
+    return -1;
+  if(tickets < 1 || tickets > 1000)
+    return -1;
+  curproc->numtickets = tickets;
   return 0;
 }
 
@@ -69,6 +82,7 @@ sys_dup(void)
 int
 sys_read(void)
 {
+  readcount++;
   struct file *f;
   int n;
   char *p;
@@ -76,6 +90,10 @@ sys_read(void)
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0)
     return -1;
   return fileread(f, p, n);
+}
+
+int sys_getreadcount() {
+  return readcount;
 }
 
 int
