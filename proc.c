@@ -1,12 +1,12 @@
-#include "proc.h"
+#include "types.h"
 #include "defs.h"
+#include "param.h"
 #include "memlayout.h"
 #include "mmu.h"
-#include "param.h"
-#include "pstat.h"
-#include "spinlock.h"
-#include "types.h"
 #include "x86.h"
+#include "proc.h"
+#include "spinlock.h"
+#include "pstat.h"
 
 struct {
   struct spinlock lock;
