@@ -87,7 +87,7 @@ mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
 //
 // setupkvm() and exec() set up every page table like this:
 //
-//   0..KERNBASE: user memory (text+data+stack+heap), mapped to
+//   PGSIZE..KERNBASE: user memory (text+data+stack+heap), mapped to
 //                phys memory allocated by the kernel
 //   KERNBASE..KERNBASE+EXTMEM: mapped to 0..EXTMEM (for I/O space)
 //   KERNBASE+EXTMEM..data: mapped to EXTMEM..V2P(data)
@@ -322,7 +322,7 @@ copyuvm(pde_t *pgdir, uint sz)
 
   if((d = setupkvm()) == 0)
     return 0;
-  for(i = 0; i < sz; i += PGSIZE){
+  for(i = PGSIZE; i < sz; i += PGSIZE){
     if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
       panic("copyuvm: pte should exist");
     if(!(*pte & PTE_P))
