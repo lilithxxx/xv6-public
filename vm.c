@@ -385,6 +385,58 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+int sys_mprotect(void) {
+  int addr, len, pa;
+  pte_t *pte;
+  if(argint(0, &addr) < 0)
+    return -1;
+  if(addr % PGSIZE != 0)
+    return -1;
+  if(argint(1, &len) < 0)
+    return -1;
+  if(len < 1)
+    return -1;
+
+  for(int i = 0; i < len; i += 1){
+    if((pte = walkpgdir(myproc()->pgdir,(void*)(addr+i*PGSIZE), 0)) == 0)
+      return -1;
+    if(!(*pte & PTE_P))
+      return -1;
+    if(!(*pte & PTE_U))
+      return -1;
+    pa = PTE_ADDR(*pte);
+    *pte = pa | PTE_P | PTE_U;
+  }
+  lcr3(V2P(myproc()->pgdir));
+  return 0;
+}
+
+int sys_munprotect(void) {
+  int addr, len, pa;
+  pte_t *pte;
+  if(argint(0, &addr) < 0)
+    return -1;
+  if(addr % PGSIZE != 0)
+    return -1;
+  if(argint(1, &len) < 0)
+    return -1;
+  if(len < 1)
+    return -1;
+
+  for(int i = 0; i < len; i += 1){
+    if((pte = walkpgdir(myproc()->pgdir,(void*)(addr+i*PGSIZE), 0)) == 0)
+      return -1;
+    if(!(*pte & PTE_P))
+      return -1;
+    if(!(*pte & PTE_U))
+      return -1;
+    pa = PTE_ADDR(*pte);
+    *pte = pa | PTE_P | PTE_W | PTE_U;
+  }
+  lcr3(V2P(myproc()->pgdir));
+  return 0;
+}
+
 //PAGEBREAK!
 // Blank page.
 //PAGEBREAK!
