@@ -146,7 +146,7 @@ tags: $(OBJS) entryother.S _init
 vectors.S: vectors.pl
 	./vectors.pl > vectors.S
 
-ULIB = ulib.o usys.o printf.o umalloc.o
+ULIB = ulib.o usys.o printf.o umalloc.o threads.o
 
 _%: %.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0x1000 -o $@ $^
@@ -179,6 +179,7 @@ UPROGS=\
 	_ls\
 	_hello\
 	_lotterytest\
+	_testthreads\
 	_mkdir\
 	_rm\
 	_sh\

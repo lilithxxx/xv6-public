@@ -1,4 +1,5 @@
 #include "pstat.h"
+#include "threads.h"
 
 struct stat;
 struct rtcdate;
@@ -30,6 +31,8 @@ int settickets(int);
 int getpinfo(struct pstat *);
 int mprotect(void*, int);
 int munprotect(void*, int);
+int clone(start_routine fcn, void* arg, void* stack);
+int join(void** stack);
 
 // ulib.c
 int stat(const char*, struct stat*);

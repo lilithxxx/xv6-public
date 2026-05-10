@@ -6,6 +6,10 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "spinlock.h"
+
+struct spinlock sbrk_lock;
+void sbrkinit(void) { initlock(&sbrk_lock, "sbrk_lock"); }
 
 int
 sys_fork(void)
@@ -51,8 +55,10 @@ sys_sbrk(void)
   if(argint(0, &n) < 0)
     return -1;
   addr = myproc()->sz;
+  acquire(&sbrk_lock);
   if(growproc(n) < 0)
-    return -1;
+    addr = -1;
+  release(&sbrk_lock);
   return addr;
 }
 

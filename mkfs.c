@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>
+#include <sys/fcntl.h>
 #include <assert.h>
 
 #define stat xv6_stat  // avoid clash with host struct stat

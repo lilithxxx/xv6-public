@@ -51,6 +51,7 @@ struct proc {
   char name[16];               // Process name (debugging)
   int numtickets;              // Number of tickets it has
   int totalticks;              // Total number of ticks it has accumulated (same as no.of times it was scheduled)
+  void *stack_base;            // Pointer to the stack if its a thread -- so that it can be freed later (its from heap)
 };
 
 // Process memory is laid out contiguously, low addresses first:

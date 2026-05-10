@@ -214,9 +214,74 @@ int fork(void) {
   return pid;
 }
 
-// Exit the current process.  Does not return.
+int sys_clone(void) {
+  int fcn, arg, stack;
+  if(argint(0, &fcn) < 0)
+	  return -1;
+  if(argint(1, &arg) < 0)
+    return -1;
+  if(argint(2, &stack) < 0)
+    return -1;
+
+  int i, pid;
+  struct proc *np;
+  struct proc *curproc = myproc();
+
+  // Allocate process.
+  if ((np = allocproc()) == 0) {
+    return -1;
+  }
+  np->stack_base = (void *)stack;
+
+  // TODO: page allign stack_base
+  stack = (stack + PGSIZE - 1) & ~(PGSIZE - 1);
+
+  // same pgdir because thread shares address space of main thread
+  np->pgdir = curproc->pgdir;
+  // Copy process state from proc.
+  np->sz = curproc->sz;
+  np->parent = curproc;
+  *np->tf = *curproc->tf;
+
+  // Build stack frame for fcn to start executing
+  // X86 calling convention will use function prologue to place the base pointer correctly so here we have to do nothing
+  void **sp = (void **)(stack + 4096);
+  sp[-1] = (void *)arg;
+  sp[-2] = (void *)0xffffffff; // fake PC because nothing to return to
+
+  np->tf->eip = (uint)fcn; // instruction pointer
+  np->tf->esp = (uint)&sp[-2]; // esp points to top of stack 
+
+  for (i = 0; i < NOFILE; i++)
+    if (curproc->ofile[i])
+      np->ofile[i] = filedup(curproc->ofile[i]);
+  np->cwd = idup(curproc->cwd);
+
+  // thread naming
+  safestrcpy(np->name, curproc->name, sizeof(curproc->name));
+  int len = strlen(np->name);
+  char *suffix = " thread";
+
+  for(int i = 0; suffix[i] != '\0' && (len + i) < sizeof(np->name) - 1; i++) {
+      np->name[len + i] = suffix[i];
+  }
+  np->name[sizeof(np->name) - 1] = '\0';
+
+  pid = np->pid;
+
+  acquire(&ptable.lock);
+
+  np->state = RUNNABLE;
+  np->numtickets = curproc->numtickets;
+
+  release(&ptable.lock);
+
+  return pid;
+}
+
+// Exit the current process/thread.  Does not return.
 // An exited process remains in the zombie state
-// until its parent calls wait() to find out it exited.
+// until its parent calls wait()/join() to find out it exited.
 void exit(void) {
   struct proc *curproc = myproc();
   struct proc *p;
@@ -270,7 +335,7 @@ int wait(void) {
     // Scan through table looking for exited children.
     havekids = 0;
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-      if (p->parent != curproc)
+      if (p->parent != curproc || p->pgdir == curproc->pgdir) // skip parent threads with same address space; that should be handled in join()
         continue;
       havekids = 1;
       if (p->state == ZOMBIE) {
@@ -284,6 +349,53 @@ int wait(void) {
         p->name[0] = 0;
         p->killed = 0;
         p->state = UNUSED;
+        release(&ptable.lock);
+        return pid;
+      }
+    }
+
+    // No point waiting if we don't have any children.
+    if (!havekids || curproc->killed) {
+      release(&ptable.lock);
+      return -1;
+    }
+
+    // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+    sleep(curproc, &ptable.lock); // DOC: wait-sleep
+  }
+}
+
+// Wait for a child thread to exit and return its pid.
+// Return -1 if this process has no children.
+int sys_join(void) {
+  int stack;
+  if(argint(0, &stack) < 0)
+	  return -1;
+  void** stack_base = (void **)stack;
+
+  struct proc *p;
+  int havekids, pid;
+  struct proc *curproc = myproc();
+
+  acquire(&ptable.lock);
+  for (;;) {
+    // Scan through table looking for exited children.
+    havekids = 0;
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      if (p->parent != curproc || p->pgdir != curproc->pgdir) // skip parent processes with different address space; that should be handled in wait()
+        continue;
+      havekids = 1;
+      if (p->state == ZOMBIE) {
+        // Found one.
+        pid = p->pid;
+        kfree(p->kstack);
+        p->kstack = 0;
+        p->pid = 0;
+        p->parent = 0;
+        p->name[0] = 0;
+        p->killed = 0;
+        p->state = UNUSED;
+		*stack_base = p->stack_base;
         release(&ptable.lock);
         return pid;
       }
