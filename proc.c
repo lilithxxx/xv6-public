@@ -642,7 +642,7 @@ int sys_getpinfo(void) {
     int i = p - ptable.proc;
     pstat->tickets[i] = p->numtickets;
     pstat->pid[i] = p->pid;
-    pstat->name[i] = p->name;
+	safestrcpy(pstat->name[i], p->name, sizeof(p->name));
     pstat->ticks[i] = p->totalticks;
     pstat->inuse[i] = (p->state != UNUSED) ? 1 : 0;
   }

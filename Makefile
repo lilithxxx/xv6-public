@@ -180,6 +180,8 @@ UPROGS=\
 	_hello\
 	_lotterytest\
 	_testthreads\
+	_spinthreads\
+	_ps\
 	_mkdir\
 	_rm\
 	_sh\
