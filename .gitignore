@@ -16,3 +16,4 @@ mkfs
 .gdbinit
 .cache/
 compile_commands.json
+xcheck
